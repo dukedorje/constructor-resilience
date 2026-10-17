@@ -1272,13 +1272,23 @@ def cmd_link(args):
 
 
 def _topic_blob(topic: dict) -> str:
+    """Text used to route a query to a topic.
+
+    The store file is already loaded. Every non-rejected atom contributes
+    its sentence and mention names. A prefix sample hides later claims.
+    """
     parts = [topic.get("id", ""), topic.get("title", ""), topic.get("description", "")]
     parts += topic.get("tags") or []
-    # sample atoms if present
     try:
         store = load_json(topic_atoms_path(topic), {})
-        for a in (store.get("atoms") or [])[:20]:
+        for a in store.get("atoms") or []:
+            if not is_active(a):
+                continue
             parts.append(atom_text(a))
+            if isinstance(a, dict):
+                for mention in a.get("mentions") or []:
+                    if isinstance(mention, dict) and mention.get("name"):
+                        parts.append(str(mention["name"]))
     except Exception:
         pass
     return " ".join(parts).lower()
